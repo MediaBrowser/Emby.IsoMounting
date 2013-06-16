@@ -15,7 +15,7 @@ namespace MediaBrowser.IsoMounter
         /// <summary>
         /// The mount semaphore - limit to four at a time.
         /// </summary>
-        private readonly SemaphoreSlim _mountSemaphore = new SemaphoreSlim(4,4);
+        private readonly SemaphoreSlim _mountSemaphore = new SemaphoreSlim(4, 4);
 
         /// <summary>
         /// The PFM API
@@ -44,8 +44,8 @@ namespace MediaBrowser.IsoMounter
                     if (err != PfmInst.installed)
                     {
                         throw new Exception("Pismo File Mount Audit Package is not installed");
-                    } 
-                    
+                    }
+
                     PfmApi pfmApi;
 
                     err = PfmStatic.ApiFactory(out pfmApi);
@@ -70,7 +70,7 @@ namespace MediaBrowser.IsoMounter
         /// Gets or sets the logger.
         /// </summary>
         /// <value>The logger.</value>
-        private ILogger Logger { get; set; }
+        private readonly ILogger _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PismoIsoManager" /> class.
@@ -78,15 +78,13 @@ namespace MediaBrowser.IsoMounter
         /// <param name="logger">The logger.</param>
         public PismoIsoManager(ILogger logger)
         {
-            Logger = logger;
-
-            _myPfmFileMountUi = new MyPfmFileMountUi(Logger);
+            _logger = logger;
         }
 
         /// <summary>
         /// The _my PFM file mount UI
         /// </summary>
-        private readonly MyPfmFileMountUi _myPfmFileMountUi;
+        private MyPfmFileMountUi _myPfmFileMountUi;
 
         /// <summary>
         /// Mounts the specified iso path.
@@ -116,7 +114,7 @@ namespace MediaBrowser.IsoMounter
 
             var fmp = new PfmFileMountCreateParams { };
 
-            fmp.ui = _myPfmFileMountUi;
+            fmp.ui = _myPfmFileMountUi ?? (_myPfmFileMountUi = new MyPfmFileMountUi(_logger));
 
             fmp.fileMountFlags |= PfmFileMountFlag.inProcess;
 
@@ -132,7 +130,7 @@ namespace MediaBrowser.IsoMounter
             fmp.mountFlags |= PfmMountFlag.noShellNotify;
             fmp.mountFlags |= PfmMountFlag.readOnly;
 
-            Logger.Info("Mounting {0}", isoPath);
+            _logger.Info("Mounting {0}", isoPath);
 
             await _mountSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
@@ -154,7 +152,7 @@ namespace MediaBrowser.IsoMounter
                 throw new IOException("Unable to start mount for " + isoPath);
             }
 
-            return new PismoMount(mount, isoPath, this, Logger);
+            return new PismoMount(mount, isoPath, this, _logger);
         }
 
         /// <summary>
@@ -175,10 +173,10 @@ namespace MediaBrowser.IsoMounter
             {
                 if (_hasInitialized)
                 {
-                    Logger.Info("Disposing PfmPapi");
+                    _logger.Info("Disposing PfmPapi");
                     _pfmApi.Dispose();
 
-                    Logger.Info("PfmStatic.ApiUnload");
+                    _logger.Info("PfmStatic.ApiUnload");
                     PfmStatic.ApiUnload();
                 }
             }

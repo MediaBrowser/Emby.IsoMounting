@@ -11,7 +11,7 @@ namespace MediaBrowser.IsoMounter
         /// <summary>
         /// The logger
         /// </summary>
-        private readonly ILogger Logger;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MyPfmFileMountUi" /> class.
@@ -19,7 +19,7 @@ namespace MediaBrowser.IsoMounter
         /// <param name="logger">The logger.</param>
         public MyPfmFileMountUi(ILogger logger)
         {
-            Logger = logger;
+            _logger = logger;
         }
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace MediaBrowser.IsoMounter
         {
             if (!string.IsNullOrEmpty(errorMessage))
             {
-                Logger.Error("Complete {0}", errorMessage);
+                _logger.Error("Complete {0}", errorMessage);
             }
         }
 
@@ -57,7 +57,7 @@ namespace MediaBrowser.IsoMounter
         /// </summary>
         public void Resume()
         {
-            Logger.Debug("Resume");
+            _logger.Debug("Resume");
         }
 
         /// <summary>
@@ -65,7 +65,7 @@ namespace MediaBrowser.IsoMounter
         /// </summary>
         public void Start()
         {
-            Logger.Debug("Start");
+            _logger.Debug("Start");
         }
 
         /// <summary>
@@ -77,7 +77,7 @@ namespace MediaBrowser.IsoMounter
         {
             if (!string.IsNullOrEmpty(data))
             {
-                Logger.Debug("Status {0}", data);
+                _logger.Debug("Status {0}", data);
             }
         }
 
@@ -86,7 +86,7 @@ namespace MediaBrowser.IsoMounter
         /// </summary>
         public void Suspend()
         {
-            Logger.Debug("Suspend");
+            _logger.Debug("Suspend");
         }
     }
 }
