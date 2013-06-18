@@ -173,13 +173,21 @@ namespace MediaBrowser.IsoMounter
             {
                 if (_hasInitialized)
                 {
-                    _logger.Info("Disposing PfmPapi");
-                    _pfmApi.Dispose();
-
-                    _logger.Info("PfmStatic.ApiUnload");
-                    PfmStatic.ApiUnload();
+                    DisposePismo();
                 }
             }
+        }
+
+        /// <summary>
+        /// Disposes the pismo.
+        /// </summary>
+        private void DisposePismo()
+        {
+            _logger.Info("Disposing PfmPapi");
+            _pfmApi.Dispose();
+
+            _logger.Info("PfmStatic.ApiUnload");
+            PfmStatic.ApiUnload();
         }
 
         /// <summary>
