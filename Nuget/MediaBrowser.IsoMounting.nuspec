@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
         <id>MediaBrowser.IsoMounting</id>
-        <version>3.0.53</version>
+        <version>3.0.55</version>
         <title>MediaBrowser.IsoMounting</title>
         <authors>Media Browser Team</authors>
         <owners>ebr,Luke,scottisafool</owners>
@@ -11,11 +11,6 @@
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <copyright>Copyright © Media Browser 2013</copyright>
         <description>Contains Media Browser's iso mounting solution.</description>
-        <dependencies>
-            <group targetFramework=".NETFramework4.5">
-                <dependency id="MediaBrowser.Common" version="3.0.122" />
-            </group>
-        </dependencies>
     </metadata>
     <files>
         <file src="dlls\MediaBrowser.IsoMounter.dll" target="lib\net45\MediaBrowser.IsoMounter.dll" />
