@@ -1,4 +1,4 @@
-﻿using MediaBrowser.Common.IO;
+﻿using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using System;
 using System.IO;
@@ -10,7 +10,7 @@ namespace MediaBrowser.IsoMounter
     /// <summary>
     /// Class IsoManager
     /// </summary>
-    public class PismoIsoManager : IIsoManager
+    public class PismoIsoManager : IIsoMounter
     {
         /// <summary>
         /// The mount semaphore - limit to four at a time.
@@ -91,11 +91,10 @@ namespace MediaBrowser.IsoMounter
         /// </summary>
         /// <param name="isoPath">The iso path.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
-        /// <param name="visibleToAllProcesses">if set to <c>true</c> [visible to all processes].</param>
         /// <returns>IsoMount.</returns>
         /// <exception cref="System.ArgumentNullException">isoPath</exception>
         /// <exception cref="System.IO.IOException">Unable to create mount.</exception>
-        public async Task<IIsoMount> Mount(string isoPath, CancellationToken cancellationToken, bool visibleToAllProcesses = true)
+        public async Task<IIsoMount> Mount(string isoPath, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(isoPath))
             {
@@ -118,10 +117,7 @@ namespace MediaBrowser.IsoMounter
 
             fmp.fileMountFlags |= PfmFileMountFlag.inProcess;
 
-            if (visibleToAllProcesses)
-            {
-                fmp.visibleProcessId = PfmVisibleProcessId.all;
-            }
+            fmp.visibleProcessId = PfmVisibleProcessId.all;
 
             fmp.mountFileName = isoPath;
 
