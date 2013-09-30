@@ -1,4 +1,6 @@
-﻿using MediaBrowser.Model.IO;
+﻿using MediaBrowser.Common.Configuration;
+using MediaBrowser.Common.Net;
+using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using System;
 using System.IO;
@@ -16,6 +18,10 @@ namespace MediaBrowser.IsoMounter
         /// The mount semaphore - limit to four at a time.
         /// </summary>
         private readonly SemaphoreSlim _mountSemaphore = new SemaphoreSlim(4, 4);
+
+        private readonly IHttpClient _httpClient;
+        private readonly IApplicationPaths _appPaths;
+        private readonly IZipClient _zipClient;
 
         /// <summary>
         /// The PFM API
@@ -75,10 +81,61 @@ namespace MediaBrowser.IsoMounter
         /// <summary>
         /// Initializes a new instance of the <see cref="PismoIsoManager" /> class.
         /// </summary>
-        /// <param name="logger">The logger.</param>
-        public PismoIsoManager(ILogger logger)
+        public PismoIsoManager(ILogger logger, IHttpClient httpClient, IApplicationPaths appPaths, IZipClient zipClient)
         {
             _logger = logger;
+            _httpClient = httpClient;
+            _appPaths = appPaths;
+            _zipClient = zipClient;
+        }
+
+        /// <summary>
+        /// Gets the name.
+        /// </summary>
+        /// <value>The name.</value>
+        public string Name
+        {
+            get { return "Pismo"; }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether [requires installation].
+        /// </summary>
+        /// <value><c>true</c> if [requires installation]; otherwise, <c>false</c>.</value>
+        public bool RequiresInstallation
+        {
+            get
+            {
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether this instance is installed.
+        /// </summary>
+        /// <value><c>true</c> if this instance is installed; otherwise, <c>false</c>.</value>
+        public bool IsInstalled
+        {
+            get
+            {
+                try
+                {
+                    return PfmApi != null;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Installs this instance.
+        /// </summary>
+        /// <returns>Task.</returns>
+        public Task Install(CancellationToken cancellationToken)
+        {
+            return new PismoInstaller(_httpClient, _logger, _appPaths, _zipClient).Install(cancellationToken);
         }
 
         /// <summary>
