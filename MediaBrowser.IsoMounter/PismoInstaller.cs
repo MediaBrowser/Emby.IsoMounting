@@ -71,7 +71,7 @@ namespace MediaBrowser.IsoMounter
                 FileName = file,
                 WindowStyle = ProcessWindowStyle.Hidden,
                 CreateNoWindow = true,
-                UseShellExecute = false
+                Verb = "runas"
             };
             using (var process = Process.Start(processStartInfo))
             {
