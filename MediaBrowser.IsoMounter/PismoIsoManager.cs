@@ -17,7 +17,7 @@ namespace MediaBrowser.IsoMounter
         /// <summary>
         /// The mount semaphore - limit to four at a time.
         /// </summary>
-        private readonly SemaphoreSlim _mountSemaphore = new SemaphoreSlim(4, 4);
+        private readonly SemaphoreSlim _mountSemaphore = new SemaphoreSlim(3, 3);
 
         private readonly IHttpClient _httpClient;
         private readonly IApplicationPaths _appPaths;
