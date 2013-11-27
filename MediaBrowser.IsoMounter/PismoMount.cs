@@ -52,6 +52,8 @@ namespace MediaBrowser.IsoMounter
             Logger = logger;
 
             MountedPath = mount.GetMount().GetUncName();
+
+            Logger.Info("{0} mounted to {1}", IsoPath, MountedPath);
         }
 
         /// <summary>
@@ -90,7 +92,15 @@ namespace MediaBrowser.IsoMounter
 
                     _isoManager.OnUnmount(this);
 
-                    _pfmFileMount.Dispose();
+                    try
+                    {
+                        _pfmFileMount.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.ErrorException("Error disposing file mount for {0}", ex, IsoPath);
+                    }
+
                     _pfmFileMount = null;
                 }
             }
