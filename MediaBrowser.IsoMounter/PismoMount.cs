@@ -72,22 +72,27 @@ namespace MediaBrowser.IsoMounter
             UnMount();
         }
 
+        private readonly object _syncLock = new object();
+
         /// <summary>
         /// Uns the mount.
         /// </summary>
         private void UnMount()
         {
-            if (_pfmFileMount != null)
+            lock (_syncLock)
             {
-                Logger.Info("Unmounting {0}", IsoPath);
+                if (_pfmFileMount != null)
+                {
+                    Logger.Info("Unmounting {0}", IsoPath);
 
-                _pfmFileMount.Cancel();
-                _pfmFileMount.Detach();
+                    _pfmFileMount.Cancel();
+                    _pfmFileMount.Detach();
 
-                _isoManager.OnUnmount(this);
+                    _isoManager.OnUnmount(this);
 
-                _pfmFileMount.Dispose();
-                _pfmFileMount = null;
+                    _pfmFileMount.Dispose();
+                    _pfmFileMount = null;
+                }
             }
         }
     }
