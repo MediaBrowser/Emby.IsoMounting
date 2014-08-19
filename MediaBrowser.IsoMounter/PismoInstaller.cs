@@ -5,7 +5,6 @@ using MediaBrowser.Model.Logging;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,9 +19,9 @@ namespace MediaBrowser.IsoMounter
         
         private readonly string[] _installUrls = new[]
                 {
-                    "https://github.com/MediaBrowser/MediaBrowser.Resources/raw/master/Pismo-Install/pfm-168-mediabrowser-win.zip",
+                    "https://github.com/MediaBrowser/MediaBrowser.Resources/raw/master/Pismo-Install/pfm-171-mediabrowser-win.exe",
 
-                    "https://www.dropbox.com/s/kinern16sd3mtag/pfm-168-mediabrowser-win.zip?dl=1"
+                    "https://www.dropbox.com/s/duxgvpld1xk1hr7/pfm-171-mediabrowser-win.exe?dl=1"
                 };
 
         public PismoInstaller(IHttpClient httpClient, ILogger logger, IApplicationPaths appPaths, IZipClient zipClient)
@@ -53,22 +52,14 @@ namespace MediaBrowser.IsoMounter
         {
             _logger.Debug("Extracting Pismo from {0}", tempFile);
 
-            var tempFolder = Path.Combine(_appPaths.TempDirectory, Guid.NewGuid().ToString());
+            var destination = Path.ChangeExtension(tempFile, ".exe");
 
-            if (!Directory.Exists(tempFolder))
-            {
-                Directory.CreateDirectory(tempFolder);
-            }
-
-            _zipClient.ExtractAll(tempFile, tempFolder, true);
-
-            var file = Directory.EnumerateFiles(tempFolder, "pfminst.exe", SearchOption.AllDirectories)
-                .First();
+            File.Copy(tempFile, destination);
 
             var processStartInfo = new ProcessStartInfo
             {
                 Arguments = "install",
-                FileName = file,
+                FileName = destination,
                 WindowStyle = ProcessWindowStyle.Hidden,
                 CreateNoWindow = true,
                 Verb = "runas"
