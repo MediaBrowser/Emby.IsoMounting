@@ -18,9 +18,10 @@ namespace MediaBrowser.IsoMounter
 		private readonly SemaphoreSlim _mountSemaphore = new SemaphoreSlim(3, 3);
 
 		private readonly string _tmpPath;
-		private readonly string _mountELF;
-		private readonly string _umountELF;
-		private readonly string _sudoELF;
+		private readonly string[] _binDirs;
+		private readonly string _mountELFName;
+		private readonly string _umountELFName;
+		private readonly string _sudoELFName;
 
 		private readonly ILogger _logger;
 
@@ -28,9 +29,14 @@ namespace MediaBrowser.IsoMounter
 		{
 			_logger = logger;
 			_tmpPath = Path.DirectorySeparatorChar + "tmp" + Path.DirectorySeparatorChar + "mediabrowser";
-			_mountELF = Path.DirectorySeparatorChar + "usr" + Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar + "mount";
-			_umountELF = Path.DirectorySeparatorChar + "usr" + Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar + "umount";
-			_sudoELF = Path.DirectorySeparatorChar + "usr" + Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar + "sudo";
+			_binDirs = new string[]
+			{
+				Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar,
+				Path.DirectorySeparatorChar + "usr" + Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar,
+			};
+			_mountELFName = "mount";
+			_umountELFName = "umount";
+			_sudoELFName = "sudo";
 		}
 
 		public string Name
@@ -60,6 +66,17 @@ namespace MediaBrowser.IsoMounter
 			return Task.FromResult(false);
 		}
 
+		private string GetELFPath(string name)
+		{
+			foreach (var dir in _binDirs)
+			{
+				var path = dir + name;
+				if (File.Exists(path))
+					return path;
+			}
+			throw new IOException("Missing "+name+". Unable to continue");
+		}
+
 		public async Task<IIsoMount> Mount(string isoPath, CancellationToken cancellationToken)
 		{
 			if (string.IsNullOrEmpty(isoPath))
@@ -67,10 +84,9 @@ namespace MediaBrowser.IsoMounter
 				throw new ArgumentNullException("isoPath");
 			}
 
-			if (!(File.Exists(_mountELF) && File.Exists(_umountELF) && File.Exists(_sudoELF)))
-			{
-				throw new IOException("Missing mount, umount or sudo. Unable to continue");
-			}
+			var mountELF = GetELFPath(_mountELFName);
+			var umountELF = GetELFPath(_umountELFName);
+			var sudoELF = GetELFPath(_sudoELFName);
 
 			string mountFolder = Path.Combine(_tmpPath, Guid.NewGuid().ToString());
 
@@ -92,12 +108,12 @@ namespace MediaBrowser.IsoMounter
 
 			await _mountSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-			string cmdFilename = _sudoELF;
-			string cmdArguments = string.Format("\"{0}\" \"{1}\" \"{2}\"", _mountELF, isoPath, mountFolder);
+			string cmdFilename = sudoELF;
+			string cmdArguments = string.Format("\"{0}\" \"{1}\" \"{2}\"", mountELF, isoPath, mountFolder);
 
 			if (Syscall.getuid() == 0)
 			{
-				cmdFilename = _mountELF;
+				cmdFilename = mountELF;
 				cmdArguments = string.Format("\"{0}\" \"{1}\"", isoPath, mountFolder);
 			}
 
@@ -145,7 +161,7 @@ namespace MediaBrowser.IsoMounter
 
 			if (process.ExitCode == 0)
 			{
-				return new LinuxMount(mountFolder, isoPath, this, _logger, _umountELF, _sudoELF);
+				return new LinuxMount(mountFolder, isoPath, this, _logger, umountELF, sudoELF);
 			}
 			else
 			{
