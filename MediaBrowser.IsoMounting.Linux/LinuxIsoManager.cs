@@ -8,26 +8,30 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Mono.Unix;
-using Mono.Unix.Native;
+using MediaBrowser.Model.Diagnostics;
+using MediaBrowser.Model.System;
 
 namespace MediaBrowser.IsoMounter
 {
 	public class LinuxIsoManager : IIsoMounter
 	{
-		private readonly SemaphoreSlim _mountSemaphore = new SemaphoreSlim(3, 3);
-
 		private readonly string _tmpPath;
 		private readonly string _mountELFName;
 		private readonly string _umountELFName;
 		private readonly string _sudoELFName;
 
 		private readonly ILogger _logger;
+        private readonly IFileSystem _fileSystem;
+        private readonly IEnvironmentInfo _environment;
+	    private readonly IProcessFactory _processFactory;
 
-		public LinuxIsoManager(ILogger logger, IHttpClient httpClient, IApplicationPaths appPaths, IZipClient zipClient)
+        public LinuxIsoManager(ILogger logger, IFileSystem fileSystem, IEnvironmentInfo environment, IProcessFactory processFactory)
 		{
 			_logger = logger;
-			_tmpPath = Path.DirectorySeparatorChar + "tmp" + Path.DirectorySeparatorChar + "mediabrowser";
+            _fileSystem = fileSystem;
+            _environment = environment;
+            _processFactory = processFactory;
+            _tmpPath = _fileSystem.DirectorySeparatorChar + "tmp" + _fileSystem.DirectorySeparatorChar + "mediabrowser";
 			_mountELFName = "mount";
 			_umountELFName = "umount";
 			_sudoELFName = "sudo";
@@ -63,23 +67,35 @@ namespace MediaBrowser.IsoMounter
 		private string GetELFPath(string name)
 		{
 
-			foreach (string test in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator))
+			foreach (string test in (_environment.GetEnvironmentVariable("PATH") ?? "").Split(_fileSystem.PathSeparator))
 			{
 
 				string path = test.Trim();
 
-				if (!String.IsNullOrEmpty(path) && File.Exists(path = Path.Combine(path, name)))
+				if (!String.IsNullOrEmpty(path) && _fileSystem.FileExists(path = Path.Combine(path, name)))
 				{
-					return Path.GetFullPath(path);
+					return _fileSystem.GetFullPath(path);
 				}
 
 			}
 
 			throw new IOException("Missing "+name+". Unable to continue");
 
-		}
+        }
 
-		public async Task<IIsoMount> Mount(string isoPath, CancellationToken cancellationToken)
+        internal static int GetUid(IEnvironmentInfo environmentInfo)
+        {
+            var uidString = environmentInfo.GetUserId();
+            int uid;
+            if (string.IsNullOrWhiteSpace(uidString) || !int.TryParse(uidString, out uid))
+            {
+                uid = 0;
+            }
+
+            return uid;
+        }
+
+        public async Task<IIsoMount> Mount(string isoPath, CancellationToken cancellationToken)
 		{
 			if (string.IsNullOrEmpty(isoPath))
 			{
@@ -95,7 +111,7 @@ namespace MediaBrowser.IsoMounter
 			_logger.Debug("Creating mount point {0}", mountFolder);
 			try
 			{
-				Directory.CreateDirectory(mountFolder);
+                _fileSystem.CreateDirectory(mountFolder);
 			}
 			catch (UnauthorizedAccessException)
 			{
@@ -108,32 +124,27 @@ namespace MediaBrowser.IsoMounter
 
 			_logger.Info("Mounting {0}...", isoPath);
 
-			await _mountSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
-
 			string cmdFilename = sudoELF;
 			string cmdArguments = string.Format("\"{0}\" \"{1}\" \"{2}\"", mountELF, isoPath, mountFolder);
 
-			if (Syscall.getuid() == 0)
+			if (GetUid(_environment) == 0)
 			{
 				cmdFilename = mountELF;
 				cmdArguments = string.Format("\"{0}\" \"{1}\"", isoPath, mountFolder);
 			}
 
-			var process = new Process
-			{
-				StartInfo = new ProcessStartInfo
-				{
-					CreateNoWindow = true,
-					RedirectStandardOutput = true,
-					RedirectStandardError = true,
-					UseShellExecute = false,
-					FileName = cmdFilename,
-					Arguments = cmdArguments,
-					WindowStyle = ProcessWindowStyle.Hidden,
-					ErrorDialog = false
-				},
-				EnableRaisingEvents = true
-			};
+            var process = _processFactory.Create(new ProcessOptions
+            {
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                FileName = cmdFilename,
+                Arguments = cmdArguments,
+                IsHidden = true,
+                ErrorDialog = false,
+                EnableRaisingEvents = true
+            });
 
 			_logger.Debug("{0} {1}", process.StartInfo.FileName, process.StartInfo.Arguments);
 
@@ -149,10 +160,9 @@ namespace MediaBrowser.IsoMounter
 			}
 			catch (Exception)
 			{
-				_mountSemaphore.Release();
 				try
 				{
-					Directory.Delete(mountFolder);
+                    _fileSystem.DeleteDirectory(mountFolder, false);
 				}
 				catch (Exception)
 				{
@@ -163,24 +173,21 @@ namespace MediaBrowser.IsoMounter
 
 			if (process.ExitCode == 0)
 			{
-				return new LinuxMount(mountFolder, isoPath, this, _logger, umountELF, sudoELF);
+				return new LinuxMount(mountFolder, isoPath, this, _logger, _fileSystem, _environment, _processFactory, umountELF, sudoELF);
 			}
-			else
-			{
-				_mountSemaphore.Release();
-				try
-				{
-					Directory.Delete(mountFolder);
-				}
-				catch (Exception)
-				{
-					throw new IOException("Unable to delete mount point " + mountFolder);
-				}
-				throw new IOException("Unable to mount file " + isoPath);
-			}
-		}
 
-		public void Dispose()
+            try
+            {
+                _fileSystem.DeleteDirectory(mountFolder, false);
+            }
+            catch (Exception)
+            {
+                throw new IOException("Unable to delete mount point " + mountFolder);
+            }
+            throw new IOException("Unable to mount file " + isoPath);
+        }
+
+        public void Dispose()
 		{
 			Dispose(true);
 		}
@@ -195,17 +202,16 @@ namespace MediaBrowser.IsoMounter
 
 		public bool CanMount(string path)
 		{
-			if ((Environment.OSVersion.Platform == PlatformID.Unix) && !(IsRunningOnMac()))
+		    if (_environment.OperatingSystem == OperatingSystem.Linux)
 			{
 				return string.Equals(Path.GetExtension(path), ".iso", StringComparison.OrdinalIgnoreCase);
 			}
-			else
-				return false;
+
+		    return false;
 		}
 
-		internal void OnUnmount(LinuxMount mount)
+	    internal void OnUnmount(LinuxMount mount)
 		{
-			_mountSemaphore.Release();
 		}
 
 		// From mono/mcs/class/Managed.Windows.Forms/System.Windows.Forms/XplatUI.cs

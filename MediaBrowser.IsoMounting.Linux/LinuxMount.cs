@@ -3,8 +3,8 @@ using MediaBrowser.Model.Logging;
 using System;
 using System.Diagnostics;
 using System.IO;
-using Mono.Unix;
-using Mono.Unix.Native;
+using MediaBrowser.Model.Diagnostics;
+using MediaBrowser.Model.System;
 
 namespace MediaBrowser.IsoMounter
 {
@@ -20,8 +20,11 @@ namespace MediaBrowser.IsoMounter
 		private readonly LinuxIsoManager _isoManager;
 
 		private ILogger Logger { get; set; }
+	    private readonly IFileSystem _fileSystem;
+	    private IEnvironmentInfo _environment;
+        private readonly IProcessFactory _processFactory;
 
-		internal LinuxMount(string mountFolder, string isoPath, LinuxIsoManager isoManager, ILogger logger, string umount, string sudo)
+        internal LinuxMount(string mountFolder, string isoPath, LinuxIsoManager isoManager, ILogger logger, IFileSystem fileSystem, IEnvironmentInfo environment, IProcessFactory processFactory, string umount, string sudo)
 		{
 			IsoPath = isoPath;
 			_isoManager = isoManager;
@@ -30,8 +33,11 @@ namespace MediaBrowser.IsoMounter
 			MountedPath = mountFolder;
 			_umountELF = umount;
 			_sudoELF = sudo;
+            _processFactory = processFactory;
+            _environment = environment;
+		    _fileSystem = fileSystem;
 
-			Logger.Info("{0} mounted to {1}", IsoPath, MountedPath);
+		    Logger.Info("{0} mounted to {1}", IsoPath, MountedPath);
 		}
 
 		public void Dispose()
@@ -54,27 +60,24 @@ namespace MediaBrowser.IsoMounter
 			string cmdFilename = _sudoELF;
 			string cmdArguments = string.Format("\"{0}\" \"{1}\"", _umountELF, MountedPath);
 
-			if (Syscall.getuid() == 0)
+			if (LinuxIsoManager.GetUid(_environment) == 0)
 			{
 				cmdFilename = _umountELF;
 				cmdArguments = string.Format("\"{0}\"", MountedPath);
 			}
 
-			var process = new Process
-			{
-				StartInfo = new ProcessStartInfo
-				{
-					CreateNoWindow = true,
-					RedirectStandardOutput = true,
-					RedirectStandardError = true,
-					UseShellExecute = false,
-					FileName = cmdFilename,
-					Arguments = cmdArguments,
-					WindowStyle = ProcessWindowStyle.Hidden,
-					ErrorDialog = false
-				},
-				EnableRaisingEvents = true
-			};
+		    var process = _processFactory.Create(new ProcessOptions
+		    {
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                FileName = cmdFilename,
+                Arguments = cmdArguments,
+                IsHidden = true,
+                ErrorDialog = false,
+                EnableRaisingEvents = true
+            });
 
 			Logger.Debug("{0} {1}", process.StartInfo.FileName, process.StartInfo.Arguments);
 
@@ -102,7 +105,7 @@ namespace MediaBrowser.IsoMounter
 
 			try
 			{
-				Directory.Delete(MountedPath);
+                _fileSystem.DeleteDirectory(MountedPath, false);
 			}
 			catch (Exception)
 			{
