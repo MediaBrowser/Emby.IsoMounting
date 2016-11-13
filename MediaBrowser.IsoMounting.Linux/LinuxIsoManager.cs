@@ -18,7 +18,6 @@ namespace MediaBrowser.IsoMounter
 		private readonly SemaphoreSlim _mountSemaphore = new SemaphoreSlim(3, 3);
 
 		private readonly string _tmpPath;
-		private readonly string[] _binDirs;
 		private readonly string _mountELFName;
 		private readonly string _umountELFName;
 		private readonly string _sudoELFName;
@@ -29,11 +28,6 @@ namespace MediaBrowser.IsoMounter
 		{
 			_logger = logger;
 			_tmpPath = Path.DirectorySeparatorChar + "tmp" + Path.DirectorySeparatorChar + "mediabrowser";
-			_binDirs = new string[]
-			{
-				Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar,
-				Path.DirectorySeparatorChar + "usr" + Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar,
-			};
 			_mountELFName = "mount";
 			_umountELFName = "umount";
 			_sudoELFName = "sudo";
@@ -68,13 +62,21 @@ namespace MediaBrowser.IsoMounter
 
 		private string GetELFPath(string name)
 		{
-			foreach (var dir in _binDirs)
+
+			foreach (string test in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator))
 			{
-				var path = dir + name;
-				if (File.Exists(path))
-					return path;
+
+				string path = test.Trim();
+
+				if (!String.IsNullOrEmpty(path) && File.Exists(path = Path.Combine(path, name)))
+				{
+					return Path.GetFullPath(path);
+				}
+
 			}
+
 			throw new IOException("Missing "+name+". Unable to continue");
+
 		}
 
 		public async Task<IIsoMount> Mount(string isoPath, CancellationToken cancellationToken)
