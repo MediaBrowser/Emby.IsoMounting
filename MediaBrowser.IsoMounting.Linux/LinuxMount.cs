@@ -1,117 +1,85 @@
+using System;
+using MediaBrowser.Model.Diagnostics;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
-using System;
-using System.Diagnostics;
-using System.IO;
-using MediaBrowser.Model.Diagnostics;
 using MediaBrowser.Model.System;
 
 namespace MediaBrowser.IsoMounter
 {
-	internal class LinuxMount : IIsoMount
-	{
-		private readonly string _umountELF;
-		private readonly string _sudoELF;
+    internal class LinuxMount : IIsoMount
+    {
 
-		public string IsoPath { get; internal set; }
+        #region Private Fields
 
-		public string MountedPath { get; internal set; }
+        private readonly LinuxIsoManager linuxIsoManager;
 
-		private readonly LinuxIsoManager _isoManager;
+        #endregion
 
-		private ILogger Logger { get; set; }
-	    private readonly IFileSystem _fileSystem;
-	    private IEnvironmentInfo _environment;
-        private readonly IProcessFactory _processFactory;
+        #region Constructor(s)
 
-        internal LinuxMount(string mountFolder, string isoPath, LinuxIsoManager isoManager, ILogger logger, IFileSystem fileSystem, IEnvironmentInfo environment, IProcessFactory processFactory, string umount, string sudo)
-		{
-			IsoPath = isoPath;
-			_isoManager = isoManager;
-			Logger = logger;
+        internal LinuxMount(LinuxIsoManager isoManager, string isoPath, string mountFolder)
+        {
 
-			MountedPath = mountFolder;
-			_umountELF = umount;
-			_sudoELF = sudo;
-            _processFactory = processFactory;
-            _environment = environment;
-		    _fileSystem = fileSystem;
+            linuxIsoManager = isoManager;
 
-		    Logger.Info("{0} mounted to {1}", IsoPath, MountedPath);
-		}
+            IsoPath = isoPath;
+            MountedPath = mountFolder;
 
-		public void Dispose()
-		{
-			Dispose(true);
-			GC.SuppressFinalize(this);
-		}
+        }
 
-		protected virtual void Dispose(bool dispose)
-		{
-			UnMount();
-		}
+        #endregion
 
-		private void UnMount()
-		{
-			Logger.Info("Unmounting {0}...", MountedPath);
+        #region Interface Implementation for IDisposable
 
-			_isoManager.OnUnmount(this);
+        // Flag: Has Dispose already been called?
+        private bool disposed = false;
 
-			string cmdFilename = _sudoELF;
-			string cmdArguments = string.Format("\"{0}\" \"{1}\"", _umountELF, MountedPath);
+        public void Dispose()
+        {
 
-			if (LinuxIsoManager.GetUid(_environment) == 0)
-			{
-				cmdFilename = _umountELF;
-				cmdArguments = string.Format("\"{0}\"", MountedPath);
-			}
+            // Dispose of unmanaged resources.
+            Dispose(true);
 
-		    var process = _processFactory.Create(new ProcessOptions
-		    {
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                FileName = cmdFilename,
-                Arguments = cmdArguments,
-                IsHidden = true,
-                ErrorDialog = false,
-                EnableRaisingEvents = true
-            });
+            // Suppress finalization.
+            GC.SuppressFinalize(this);
 
-			Logger.Debug("{0} {1}", process.StartInfo.FileName, process.StartInfo.Arguments);
+        }
 
-			StreamReader outputReader = null;
-			StreamReader errorReader = null;
+        protected virtual void Dispose(bool disposing)
+        {
 
-			try
-			{
-				process.Start();
-				outputReader = process.StandardOutput;
-				errorReader = process.StandardError;
-				Logger.Debug("Unmount StdOut: " + outputReader.ReadLine());
-				Logger.Debug("Unmount StdErr: " + errorReader.ReadLine());
-			}
-			catch (Exception)
-			{
-				throw new IOException("Unable to unmount path " + MountedPath);
-				//TODO: Retry with -f
-			}
+            if (disposed) {
+                return;
+            }
+            
+            if (disposing) {
 
-			if (process.ExitCode != 0)
-			{
-				throw new IOException("Unable to unmount path " + MountedPath);
-			}
+                //
+                // Free managed objects here.
+                //
 
-			try
-			{
-                _fileSystem.DeleteDirectory(MountedPath, false);
-			}
-			catch (Exception)
-			{
-				throw new IOException("Unable to delete mount point " + MountedPath);
-			}
-		}
-	}
+                linuxIsoManager.OnUnmount(this);
+
+            }
+
+            //
+            // Free any unmanaged objects here.
+            //
+
+            disposed = true;
+
+        }
+
+        #endregion
+
+        #region Interface Implementation for IIsoMount
+
+        public string IsoPath { get; private set; }
+        public string MountedPath { get; private set; }
+
+        #endregion
+
+    }
+
 }
 
