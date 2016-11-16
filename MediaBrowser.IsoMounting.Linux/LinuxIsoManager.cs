@@ -62,7 +62,7 @@ namespace MediaBrowser.IsoMounter
 
             SudoCommand = GetFullPathForExecutable("sudo");
 
-            Logger.Debug(
+            Logger.Info(
                 "[{0}] Using version of [sudo] located at [{1}].",
                 Name,
                 SudoCommand
@@ -70,7 +70,7 @@ namespace MediaBrowser.IsoMounter
 
             MountCommand = GetFullPathForExecutable("mount");
 
-            Logger.Debug(
+            Logger.Info(
                 "[{0}] Using version of [mount] located at [{1}].",
                 Name,
                 MountCommand
@@ -78,7 +78,7 @@ namespace MediaBrowser.IsoMounter
 
             UmountCommand = GetFullPathForExecutable("umount");
 
-            Logger.Debug(
+            Logger.Info(
                 "[{0}] Using version of [umount] located at [{1}].",
                 Name,
                 UmountCommand
@@ -115,7 +115,7 @@ namespace MediaBrowser.IsoMounter
         public bool CanMount(string path)
         {
 
-            Logger.Debug(
+            Logger.Info(
                 "[{0}] Checking we can attempt to mount [{1}], Extension = [{2}], Operating System = [{3}], Executables Available = [{4}].",
                 Name,
                 path,
@@ -360,9 +360,19 @@ namespace MediaBrowser.IsoMounter
 
             if (ExecuteCommand(cmdFilename, cmdArguments)) {
 
+                Logger.Info(
+                    "[{0}] ISO mount completed successfully.",
+                    Name
+                );
+
                 mountedISO = new LinuxMount(this, isoPath, mountPoint);
 
             } else {
+
+                Logger.Info(
+                    "[{0}] ISO mount completed with errors.",
+                    Name
+                );
 
                 try {
                     
@@ -395,7 +405,7 @@ namespace MediaBrowser.IsoMounter
             if (mount != null) {
 
                 Logger.Info(
-                    "[{0}] OnUnmount called for ISO [{1}] mounted on [{2}].",
+                    "[{0}] Attempting to unmount ISO [{1}] mounted on [{2}].",
                     Name,
                     mount.IsoPath,
                     mount.MountedPath
