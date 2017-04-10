@@ -47,7 +47,7 @@ namespace MediaBrowser.IsoMounter
             Logger.Debug(
                 "[{0}] System path separator is [{1}].",
                 Name,
-                FileSystem.PathSeparator
+                EnvironmentInfo.PathSeparator
             );
 
             Logger.Debug(
@@ -215,7 +215,7 @@ namespace MediaBrowser.IsoMounter
         private string GetFullPathForExecutable(string name)
         {
 
-            foreach (string test in (EnvironmentInfo.GetEnvironmentVariable("PATH") ?? "").Split(FileSystem.PathSeparator)) {
+            foreach (string test in (EnvironmentInfo.GetEnvironmentVariable("PATH") ?? "").Split(EnvironmentInfo.PathSeparator)) {
 
                 string path = test.Trim();
 
