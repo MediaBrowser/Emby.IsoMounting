@@ -6,11 +6,14 @@ using MediaBrowser.Model.Diagnostics;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.System;
+using System.Runtime.InteropServices;
 
 namespace MediaBrowser.IsoMounter
 {
     public class LinuxIsoManager : IIsoMounter
-    { 
+    {
+        [DllImport("libc", SetLastError = true)]
+        public static extern uint getuid();
 
         #region Private Fields
 
@@ -229,21 +232,16 @@ namespace MediaBrowser.IsoMounter
 
         }
 
-        private int GetUID()
+        private uint GetUID()
         {
 
-            string uidString = EnvironmentInfo.GetUserId();
-            int uid;
-
-            if (!int.TryParse(uidString, out uid)) {
-                uid = -1;
-            }
+            var uid = getuid();
 
             Logger.Debug(
                 "[{0}] Our current UID is [{1}], GetUserId() returned [{2}].",
                 Name,
                 uid.ToString(),
-                uidString
+                uid
             );
 
             return uid;
