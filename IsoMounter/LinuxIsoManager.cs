@@ -87,9 +87,12 @@ namespace IsoMounter
                 UmountCommand
             );
 
-            if (!String.IsNullOrEmpty(SudoCommand) && !String.IsNullOrEmpty(MountCommand) && !String.IsNullOrEmpty(UmountCommand)) {
+            if (!String.IsNullOrEmpty(SudoCommand) && !String.IsNullOrEmpty(MountCommand) && !String.IsNullOrEmpty(UmountCommand))
+            {
                 ExecutablesAvailable = true;
-            } else {
+            }
+            else
+            {
                 ExecutablesAvailable = false;
             }
 
@@ -99,18 +102,23 @@ namespace IsoMounter
 
         #region Interface Implementation for IIsoMounter
 
-        public bool IsInstalled {
-            get {
+        public bool IsInstalled
+        {
+            get
+            {
                 return true;
             }
         }
 
-        public string Name {
+        public string Name
+        {
             get { return "LinuxMount"; }
         }
 
-        public bool RequiresInstallation {
-            get {
+        public bool RequiresInstallation
+        {
+            get
+            {
                 return false;
             }
         }
@@ -118,7 +126,8 @@ namespace IsoMounter
         public bool CanMount(string path)
         {
 
-            if (EnvironmentInfo.OperatingSystem == MediaBrowser.Model.System.OperatingSystem.Linux) {
+            if (EnvironmentInfo.OperatingSystem == MediaBrowser.Model.System.OperatingSystem.Linux)
+            {
                 Logger.Info(
                     "[{0}] Checking we can attempt to mount [{1}], Extension = [{2}], Operating System = [{3}], Executables Available = [{4}].",
                     Name,
@@ -128,12 +137,17 @@ namespace IsoMounter
                     ExecutablesAvailable.ToString()
                 );
 
-                if (ExecutablesAvailable) {
+                if (ExecutablesAvailable)
+                {
                     return string.Equals(Path.GetExtension(path), ".iso", StringComparison.OrdinalIgnoreCase);
-                } else {
+                }
+                else
+                {
                     return false;
                 }
-            } else {
+            }
+            else
+            {
                 return false;
             }
 
@@ -144,17 +158,20 @@ namespace IsoMounter
             return Task.FromResult(false);
         }
 
-        public async Task<IMediaMount> Mount(string isoPath, CancellationToken cancellationToken)
+        public Task<IMediaMount> Mount(string isoPath, CancellationToken cancellationToken)
         {
 
             LinuxMount mountedISO;
 
-            if (MountISO(isoPath, out mountedISO)) {
+            if (MountISO(isoPath, out mountedISO))
+            {
 
-                return mountedISO;
+                return Task.FromResult<IMediaMount>(mountedISO);
 
-            }else{
-                
+            }
+            else
+            {
+
                 throw new IOException(String.Format(
                     "An error occurred trying to mount image [$0].",
                     isoPath
@@ -185,7 +202,8 @@ namespace IsoMounter
         protected virtual void Dispose(bool disposing)
         {
 
-            if (disposed) {
+            if (disposed)
+            {
                 return;
             }
 
@@ -195,7 +213,8 @@ namespace IsoMounter
                 disposing.ToString()
             );
 
-            if (disposing) {
+            if (disposing)
+            {
 
                 //
                 // Free managed objects here.
@@ -218,11 +237,13 @@ namespace IsoMounter
         private string GetFullPathForExecutable(string name)
         {
 
-            foreach (string test in (EnvironmentInfo.GetEnvironmentVariable("PATH") ?? "").Split(EnvironmentInfo.PathSeparator)) {
+            foreach (string test in (EnvironmentInfo.GetEnvironmentVariable("PATH") ?? "").Split(EnvironmentInfo.PathSeparator))
+            {
 
                 string path = test.Trim();
 
-                if (!String.IsNullOrEmpty(path) && FileSystem.FileExists(path = Path.Combine(path, name))) {
+                if (!String.IsNullOrEmpty(path) && FileSystem.FileExists(path = Path.Combine(path, name)))
+                {
                     return FileSystem.GetFullPath(path);
                 }
 
@@ -254,7 +275,8 @@ namespace IsoMounter
             bool processFailed = false;
 
             var process = ProcessFactory.Create(
-                new ProcessOptions {
+                new ProcessOptions
+                {
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -267,7 +289,8 @@ namespace IsoMounter
                 }
             );
 
-            try {
+            try
+            {
 
                 process.Start();
 
@@ -286,7 +309,9 @@ namespace IsoMounter
                     process.StandardError.ReadToEnd()
                 );
 
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
 
                 processFailed = true;
 
@@ -298,9 +323,12 @@ namespace IsoMounter
 
             }
 
-            if (!processFailed && process.ExitCode == 0) {
+            if (!processFailed && process.ExitCode == 0)
+            {
                 return true;
-            } else {
+            }
+            else
+            {
                 return false;
             }
 
@@ -313,7 +341,8 @@ namespace IsoMounter
             string cmdFilename;
             string mountPoint = Path.Combine(MountPointRoot, Guid.NewGuid().ToString());
 
-            if (!string.IsNullOrEmpty(isoPath)) {
+            if (!string.IsNullOrEmpty(isoPath))
+            {
 
                 Logger.Info(
                     "[{0}] Attempting to mount [{1}].",
@@ -327,24 +356,34 @@ namespace IsoMounter
                     mountPoint
                 );
 
-            } else {
-                
+            }
+            else
+            {
+
                 throw new ArgumentNullException(nameof(isoPath));
-            
+
             }
 
-            try {
+            try
+            {
                 FileSystem.CreateDirectory(mountPoint);
-            } catch (UnauthorizedAccessException) {
+            }
+            catch (UnauthorizedAccessException)
+            {
                 throw new IOException("Unable to create mount point(Permission denied) for " + isoPath);
-            } catch (Exception) {
+            }
+            catch (Exception)
+            {
                 throw new IOException("Unable to create mount point for " + isoPath);
             }
 
-            if (GetUID() == 0) {
+            if (GetUID() == 0)
+            {
                 cmdFilename = MountCommand;
                 cmdArguments = string.Format("\"{0}\" \"{1}\"", isoPath, mountPoint);
-            } else {
+            }
+            else
+            {
                 cmdFilename = SudoCommand;
                 cmdArguments = string.Format("\"{0}\" \"{1}\" \"{2}\"", MountCommand, isoPath, mountPoint);
             }
@@ -356,7 +395,8 @@ namespace IsoMounter
                 cmdArguments
             );
 
-            if (ExecuteCommand(cmdFilename, cmdArguments)) {
+            if (ExecuteCommand(cmdFilename, cmdArguments))
+            {
 
                 Logger.Info(
                     "[{0}] ISO mount completed successfully.",
@@ -365,18 +405,23 @@ namespace IsoMounter
 
                 mountedISO = new LinuxMount(this, isoPath, mountPoint);
 
-            } else {
+            }
+            else
+            {
 
                 Logger.Info(
                     "[{0}] ISO mount completed with errors.",
                     Name
                 );
 
-                try {
-                    
+                try
+                {
+
                     FileSystem.DeleteDirectory(mountPoint, false);
 
-                } catch (Exception ex) {
+                }
+                catch (Exception ex)
+                {
 
                     Logger.Info(
                         "[{0}] Unhandled exception removing mount point, exception is [{1}].",
@@ -400,7 +445,8 @@ namespace IsoMounter
             string cmdArguments;
             string cmdFilename;
 
-            if (mount != null) {
+            if (mount != null)
+            {
 
                 Logger.Info(
                     "[{0}] Attempting to unmount ISO [{1}] mounted on [{2}].",
@@ -409,16 +455,21 @@ namespace IsoMounter
                     mount.MountedPath
                 );
 
-            } else {
-                
+            }
+            else
+            {
+
                 throw new ArgumentNullException(nameof(mount));
-            
+
             }
 
-            if (GetUID() == 0) {
+            if (GetUID() == 0)
+            {
                 cmdFilename = UmountCommand;
                 cmdArguments = string.Format("\"{0}\"", mount.MountedPath);
-            } else {
+            }
+            else
+            {
                 cmdFilename = SudoCommand;
                 cmdArguments = string.Format("\"{0}\" \"{1}\"", UmountCommand, mount.MountedPath);
             }
@@ -430,14 +481,17 @@ namespace IsoMounter
                 cmdArguments
             );
 
-            if (ExecuteCommand(cmdFilename, cmdArguments)) {
+            if (ExecuteCommand(cmdFilename, cmdArguments))
+            {
 
                 Logger.Info(
                     "[{0}] ISO unmount completed successfully.",
                     Name
                 );
 
-            } else {
+            }
+            else
+            {
 
                 Logger.Info(
                     "[{0}] ISO unmount completed with errors.",
@@ -446,11 +500,14 @@ namespace IsoMounter
 
             }
 
-            try {
+            try
+            {
 
                 FileSystem.DeleteDirectory(mount.MountedPath, false);
 
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
 
                 Logger.Info(
                     "[{0}] Unhandled exception removing mount point, exception is [{1}].",
@@ -459,11 +516,11 @@ namespace IsoMounter
                 );
 
             }
-                          
+
         }
 
         #endregion
-  
+
         #region Internal Methods
 
         internal void OnUnmount(LinuxMount mount)
