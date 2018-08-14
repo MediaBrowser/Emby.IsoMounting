@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 
 namespace IsoMounter
 {
-    public class LinuxIsoManager : IIsoMounter
+    public class LinuxIsoManager : IMediaMounter
     {
         [DllImport("libc", SetLastError = true)]
         public static extern uint getuid();
@@ -118,7 +118,7 @@ namespace IsoMounter
         public bool CanMount(string path)
         {
 
-            if (EnvironmentInfo.OperatingSystem == OperatingSystem.Linux) {
+            if (EnvironmentInfo.OperatingSystem == MediaBrowser.Model.System.OperatingSystem.Linux) {
                 Logger.Info(
                     "[{0}] Checking we can attempt to mount [{1}], Extension = [{2}], Operating System = [{3}], Executables Available = [{4}].",
                     Name,
@@ -144,7 +144,7 @@ namespace IsoMounter
             return Task.FromResult(false);
         }
 
-        public async Task<IIsoMount> Mount(string isoPath, CancellationToken cancellationToken)
+        public async Task<IMediaMount> Mount(string isoPath, CancellationToken cancellationToken)
         {
 
             LinuxMount mountedISO;

@@ -2,11 +2,12 @@ using System;
 using MediaBrowser.Model.Diagnostics;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
+using MediaBrowser.Model.MediaInfo;
 using MediaBrowser.Model.System;
 
 namespace IsoMounter
 {
-    internal class LinuxMount : IIsoMount
+    internal class LinuxMount : IMediaMount
     {
 
         #region Private Fields
@@ -24,7 +25,7 @@ namespace IsoMounter
 
             IsoPath = isoPath;
             MountedPath = mountFolder;
-
+            MountedProtocol = MediaProtocol.File;
         }
 
         #endregion
@@ -76,6 +77,7 @@ namespace IsoMounter
 
         public string IsoPath { get; private set; }
         public string MountedPath { get; private set; }
+        public MediaProtocol MountedProtocol { get; set; }
 
         #endregion
 
