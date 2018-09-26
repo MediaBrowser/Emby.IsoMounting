@@ -123,7 +123,7 @@ namespace IsoMounter
             }
         }
 
-        public bool CanMount(string path)
+        public bool CanMount(string path, string container)
         {
 
             if (EnvironmentInfo.OperatingSystem == MediaBrowser.Model.System.OperatingSystem.Linux)
@@ -158,7 +158,7 @@ namespace IsoMounter
             return Task.FromResult(false);
         }
 
-        public Task<IMediaMount> Mount(string isoPath, CancellationToken cancellationToken)
+        public Task<IMediaMount> Mount(string isoPath, string container, CancellationToken cancellationToken)
         {
 
             LinuxMount mountedISO;
