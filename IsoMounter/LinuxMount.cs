@@ -4,6 +4,8 @@ using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.MediaInfo;
 using MediaBrowser.Model.System;
+using MediaBrowser.Model.Entities;
+using MediaBrowser.Controller.MediaEncoding;
 
 namespace IsoMounter
 {
@@ -13,19 +15,35 @@ namespace IsoMounter
         #region Private Fields
 
         private readonly LinuxIsoManager linuxIsoManager;
+        private readonly IMediaEncoder mediaEncoder;
 
         #endregion
 
         #region Constructor(s)
 
-        internal LinuxMount(LinuxIsoManager isoManager, string isoPath, string mountFolder)
+        internal LinuxMount(LinuxIsoManager isoManager, IMediaEncoder mediaEncoder, string isoPath, string mountFolder, string container)
         {
 
             linuxIsoManager = isoManager;
+            this.mediaEncoder = mediaEncoder;
 
             IsoPath = isoPath;
             MountedPath = mountFolder;
+            MountedFolderPath = mountFolder;
             MountedProtocol = MediaProtocol.File;
+
+            if (string.Equals(container, MediaContainer.DvdIso, StringComparison.OrdinalIgnoreCase))
+            {
+                var files = mediaEncoder.GetDvdVobFiles(mountFolder);
+
+                var mountedPath = string.Join("|", files);
+            }
+            else if (string.Equals(container, MediaContainer.BlurayIso, StringComparison.OrdinalIgnoreCase))
+            {
+                var files = mediaEncoder.GetBlurayM2tsFiles(mountFolder);
+
+                var mountedPath = string.Join("|", files);
+            }
         }
 
         #endregion
@@ -77,6 +95,7 @@ namespace IsoMounter
 
         public string IsoPath { get; private set; }
         public string MountedPath { get; private set; }
+        public string MountedFolderPath { get; private set; }
         public MediaProtocol MountedProtocol { get; set; }
 
         #endregion

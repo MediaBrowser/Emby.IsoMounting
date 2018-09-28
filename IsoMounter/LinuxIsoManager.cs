@@ -7,6 +7,7 @@ using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.System;
 using System.Runtime.InteropServices;
+using MediaBrowser.Controller.MediaEncoding;
 
 namespace IsoMounter
 {
@@ -26,18 +27,20 @@ namespace IsoMounter
         private readonly IProcessFactory ProcessFactory;
         private readonly string SudoCommand;
         private readonly string UmountCommand;
+        private readonly IMediaEncoder mediaEncoder;
 
         #endregion
 
         #region Constructor(s)
 
-        public LinuxIsoManager(ILogger logger, IFileSystem fileSystem, IEnvironmentInfo environment, IProcessFactory processFactory)
+        public LinuxIsoManager(ILogger logger, IFileSystem fileSystem, IEnvironmentInfo environment, IProcessFactory processFactory, IMediaEncoder mediaEncoder)
         {
 
             EnvironmentInfo = environment;
             FileSystem = fileSystem;
             Logger = logger;
             ProcessFactory = processFactory;
+            this.mediaEncoder = mediaEncoder;
 
             MountPointRoot = FileSystem.DirectorySeparatorChar + "tmp" + FileSystem.DirectorySeparatorChar + "Emby";
 
@@ -163,7 +166,7 @@ namespace IsoMounter
 
             LinuxMount mountedISO;
 
-            if (MountISO(isoPath, out mountedISO))
+            if (MountISO(isoPath, container, out mountedISO))
             {
 
                 return Task.FromResult<IMediaMount>(mountedISO);
@@ -334,7 +337,7 @@ namespace IsoMounter
 
         }
 
-        private bool MountISO(string isoPath, out LinuxMount mountedISO)
+        private bool MountISO(string isoPath, string container, out LinuxMount mountedISO)
         {
 
             string cmdArguments;
@@ -403,7 +406,7 @@ namespace IsoMounter
                     Name
                 );
 
-                mountedISO = new LinuxMount(this, isoPath, mountPoint);
+                mountedISO = new LinuxMount(this, mediaEncoder, isoPath, mountPoint, container);
 
             }
             else
@@ -452,7 +455,7 @@ namespace IsoMounter
                     "[{0}] Attempting to unmount ISO [{1}] mounted on [{2}].",
                     Name,
                     mount.IsoPath,
-                    mount.MountedPath
+                    mount.MountedFolderPath
                 );
 
             }
@@ -466,12 +469,12 @@ namespace IsoMounter
             if (GetUID() == 0)
             {
                 cmdFilename = UmountCommand;
-                cmdArguments = string.Format("\"{0}\"", mount.MountedPath);
+                cmdArguments = string.Format("\"{0}\"", mount.MountedFolderPath);
             }
             else
             {
                 cmdFilename = SudoCommand;
-                cmdArguments = string.Format("\"{0}\" \"{1}\"", UmountCommand, mount.MountedPath);
+                cmdArguments = string.Format("\"{0}\" \"{1}\"", UmountCommand, mount.MountedFolderPath);
             }
 
             Logger.Debug(
@@ -503,7 +506,7 @@ namespace IsoMounter
             try
             {
 
-                FileSystem.DeleteDirectory(mount.MountedPath, false);
+                FileSystem.DeleteDirectory(mount.MountedFolderPath, false);
 
             }
             catch (Exception ex)
