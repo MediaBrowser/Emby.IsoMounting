@@ -32,13 +32,13 @@ namespace IsoMounter
             MountedFolderPath = mountFolder;
             MountedProtocol = MediaProtocol.File;
 
-            if (string.Equals(container, MediaContainer.DvdIso, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(container, MediaContainer.DvdIso.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 var files = mediaEncoder.GetDvdVobFiles(mountFolder);
 
                 var mountedPath = string.Join("|", files);
             }
-            else if (string.Equals(container, MediaContainer.BlurayIso, StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(container, MediaContainer.BlurayIso.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 var files = mediaEncoder.GetBlurayM2tsFiles(mountFolder);
 
